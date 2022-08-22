@@ -16,6 +16,7 @@ import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.plugin.PluginManager;
 import net.md_5.bungee.api.scheduler.TaskScheduler;
+import redis.clients.jedis.Jedis;
 
 public abstract class ProxyServer
 {
@@ -326,5 +327,9 @@ public abstract class ProxyServer
      * @see Title
      */
     public abstract Title createTitle();
+
+    public abstract Jedis getRedisConnection();
+
+    public abstract void publish(String channel, String message);
 
 }

@@ -102,6 +102,7 @@ import net.md_5.bungee.scheduler.BungeeScheduler;
 import net.md_5.bungee.util.CaseInsensitiveMap;
 import net.samagames.Loader;
 import net.samagames.core.databases.RedisServer;
+import redis.clients.jedis.Jedis;
 
 /**
  * Main BungeeCord proxy class.
@@ -809,6 +810,18 @@ public class BungeeCord extends ProxyServer
         return new BungeeTitle();
     }
 
+    @Override
+    public Jedis getRedisConnection() {
+        Preconditions.checkNotNull(FoxProxManager, "FoxProx is not initialized.");
+        return FoxProxManager.getDatabaseConnector().getBungeeResource();
+    }
+
+    @Override
+    public void publish(String channel, String message) {
+        Preconditions.checkNotNull(FoxProxManager, "FoxProx is not initialized.");
+        FoxProxManager.getPubSub().send(channel, message);
+    }
+
     // FlameCord - Method to simplify module registering
     public void loadModules() {
         pluginManager.registerCommand(null, new CommandEnd());
@@ -816,6 +829,8 @@ public class BungeeCord extends ProxyServer
         pluginManager.registerCommand(null, new CommandSEnd());
         pluginManager.registerCommand(null, new CommandBungee());
         pluginManager.registerCommand(null, new CommandServer());
+
+        pluginManager.loadPlugins();
     }
 
     public static Loader getFoxProxManager() {

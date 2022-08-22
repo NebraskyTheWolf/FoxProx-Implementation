@@ -7,9 +7,11 @@ import net.samagames.core.databases.impl.PubSubAPI;
 import net.samagames.core.helpers.RedisEmitter;
 import net.samagames.core.helpers.channel.ModerationListener;
 import net.samagames.core.helpers.permissions.PermissionsManager;
+import net.samagames.core.helpers.players.LoadBalancerListener;
 import net.samagames.core.helpers.players.NetworkListeners;
 import net.samagames.core.helpers.players.PlayerJoinListener;
 import net.samagames.core.helpers.players.ProxyPingListener;
+import net.samagames.core.helpers.servers.FetchLobby;
 import net.samagames.core.helpers.servers.ServerUtils;
 import net.samagames.core.helpers.servers.ServersListeners;
 import net.samagames.persistanceapi.GameServiceManager;
@@ -32,6 +34,8 @@ public class Loader {
 
     private final NetworkListeners networkListeners;
 
+    private final LoadBalancerListener loadBalancerListener;
+
     private final ScheduledExecutorService executor;
     private final DatabaseConnector databaseConnector;
     private final PubSubAPI pubSub;
@@ -43,6 +47,8 @@ public class Loader {
     private final BungeeConfigBean bungeeConfig;
 
     private final ProxyServer server;
+
+    private final FetchLobby fetchLobby;
 
     public Loader(String url, String username, String password, RedisServer bungee, ProxyServer server) throws Exception {
         instance = this;
@@ -63,6 +69,9 @@ public class Loader {
         this.playerJoinListener = new PlayerJoinListener();
         this.proxyPingListener = new ProxyPingListener();
         this.networkListeners = new NetworkListeners();
+        this.loadBalancerListener = new LoadBalancerListener();
+
+        this.fetchLobby = new FetchLobby(this);
 
         this.databaseConnector = new DatabaseConnector(this, bungee);
         this.pubSub = new PubSubAPI(this);
@@ -88,6 +97,9 @@ public class Loader {
         this.server
                 .getPluginManager()
                 .registerListener(this.networkListeners);
+        this.server
+                .getPluginManager()
+                .registerListener(this.loadBalancerListener);
     }
 
     public void onShutdown() {
@@ -97,15 +109,6 @@ public class Loader {
 
     public GameServiceManager getGameServiceManager() {
         return manager;
-    }
-    public String getUrl() {
-        return url;
-    }
-    public String getPassword() {
-        return password;
-    }
-    public String getUsername() {
-        return username;
     }
     public static Loader getInstance() {
         return instance;
@@ -131,16 +134,10 @@ public class Loader {
     public DatabaseConnector getDatabaseConnector() {
         return databaseConnector;
     }
-    public ServersListeners getServersListeners() {
-        return serversListeners;
-    }
-    public ModerationListener getModerationListener() {
-        return moderationListener;
-    }
-    public PlayerJoinListener getPlayerJoinListener() {
-        return playerJoinListener;
-    }
     public BungeeConfigBean getBungeeConfig() {
         return bungeeConfig;
+    }
+    public FetchLobby getFetchLobby() {
+        return fetchLobby;
     }
 }

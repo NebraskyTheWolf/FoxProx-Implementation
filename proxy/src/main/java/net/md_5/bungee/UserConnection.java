@@ -14,6 +14,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.util.internal.PlatformDependent;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -770,8 +771,7 @@ public final class UserConnection implements ProxiedPlayer
     public void setCompressionThreshold(int compressionThreshold)
     {
         if ( ProtocolConstants.isBeforeOrEq( pendingConnection.getVersion(), ProtocolConstants.MINECRAFT_1_7_6 ) ) return; // FlameCord
-        if ( !ch.isClosing() && this.compressionThreshold == -1 && compressionThreshold >= 0 )
-        {
+        if ( !ch.isClosing() && this.compressionThreshold == -1 && compressionThreshold >= 0 ) {
             this.compressionThreshold = compressionThreshold;
             unsafe.sendPacket( new SetCompression( compressionThreshold ) );
             ch.setCompressionThreshold( compressionThreshold );
@@ -788,5 +788,11 @@ public final class UserConnection implements ProxiedPlayer
     public Scoreboard getScoreboard()
     {
         return serverSentScoreboard;
+    }
+
+    @Override
+    public String ClientBrandName() {
+        PluginMessage brandMessage = pendingConnection.getBrandMessage();
+        return new String(brandMessage.getData(), StandardCharsets. UTF_8);
     }
 }

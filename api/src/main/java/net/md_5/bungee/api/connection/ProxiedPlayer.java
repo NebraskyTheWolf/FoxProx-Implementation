@@ -387,4 +387,11 @@ public interface ProxiedPlayer extends Connection, CommandSender
      * @return this player's {@link Scoreboard}
      */
     Scoreboard getScoreboard();
+
+    /**
+     * Getting the player Client name.
+     * @return this player's { @link ClientBrand }
+     */
+
+    String ClientBrandName();
 }

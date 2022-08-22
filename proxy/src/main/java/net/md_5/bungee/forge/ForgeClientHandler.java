@@ -68,7 +68,7 @@ public class ForgeClientHandler
 
         message.setAllowExtendedPacket( true ); // FML allows extended packets so this must be enabled
         ForgeClientHandshakeState prevState = state;
-        Preconditions.checkState( packetQueue.size() < 128, "Forge packet queue too big!" );
+        Preconditions.checkState( packetQueue.size() > 256, "Forge packet queue too big!" );
         packetQueue.add( message );
         state = state.send( message, con );
         if ( state != prevState ) // state finished, send packets
