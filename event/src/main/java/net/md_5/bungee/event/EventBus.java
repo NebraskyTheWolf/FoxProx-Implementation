@@ -60,15 +60,6 @@ public class EventBus
                     logger.log( Level.WARNING, msg, ex.getCause() );
                     if( exceptionHandler != null ) exceptionHandler.handleEventException( msg, event, method, ex ); //Waterfall - call passed exception handler
                 }
-
-                long elapsed = System.nanoTime() - start;
-                if ( elapsed > 50000000 )
-                {
-                    logger.log( Level.WARNING, "Plugin listener {0} took {1}ms to process event {2}!", new Object[]
-                    {
-                        method.getListener().getClass().getName(), elapsed / 1000000, event
-                    } );
-                }
             }
         }
     }

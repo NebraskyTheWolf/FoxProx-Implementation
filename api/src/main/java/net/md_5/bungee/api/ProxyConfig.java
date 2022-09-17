@@ -5,11 +5,6 @@ import java.util.Map;
 import net.md_5.bungee.api.config.ListenerInfo;
 import net.md_5.bungee.api.config.ServerInfo;
 
-/**
- * Core configuration adaptor for the proxy api.
- *
- * @deprecated This class is subject to rapid change between releases
- */
 public interface ProxyConfig
 {
 

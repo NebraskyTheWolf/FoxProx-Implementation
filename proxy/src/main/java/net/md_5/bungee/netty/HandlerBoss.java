@@ -163,7 +163,7 @@ public class HandlerBoss extends ChannelInboundHandlerAdapter
             boolean logExceptions = !( handler instanceof PingHandler );
 
             // FlameCord - Option to log exceptions
-            logExceptions = FlameCord.getInstance().getFlameCordConfiguration().isLoggerExceptions() ? logExceptions : false;
+            logExceptions = FlameCord.getInstance().getFlameCordConfiguration().isLoggerExceptions() && logExceptions;
             
             if ( logExceptions )
             {

@@ -10,13 +10,11 @@ import lombok.ToString;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ComponentBuilder.FormatRetention;
 
-@Setter
 @ToString(exclude = "parent")
 @EqualsAndHashCode(exclude = "parent")
 public abstract class BaseComponent
 {
 
-    @Setter(AccessLevel.NONE)
     BaseComponent parent;
 
     /**
@@ -477,9 +475,10 @@ public abstract class BaseComponent
      *
      * @param text the text to append
      */
-    public void addExtra(String text)
+    public BaseComponent addExtra(String text)
     {
         addExtra( new TextComponent( text ) );
+        return this;
     }
 
     /**
@@ -488,7 +487,7 @@ public abstract class BaseComponent
      *
      * @param component the component to append
      */
-    public void addExtra(BaseComponent component)
+    public BaseComponent addExtra(BaseComponent component)
     {
         if ( extra == null )
         {
@@ -496,6 +495,7 @@ public abstract class BaseComponent
         }
         component.parent = this;
         extra.add( component );
+        return this;
     }
 
     /**
@@ -581,5 +581,74 @@ public abstract class BaseComponent
         {
             builder.append( ChatColor.MAGIC );
         }
+    }
+
+    public BaseComponent setBold(Boolean bold) {
+        this.bold = bold;
+
+        return this;
+    }
+
+    public BaseComponent setColor(ChatColor color) {
+        this.color = color;
+        return this;
+    }
+
+    public BaseComponent setClickEvent(ClickEvent clickEvent) {
+        this.clickEvent = clickEvent;
+        return this;
+    }
+
+    public BaseComponent setFont(String font) {
+        this.font = font;
+        return this;
+    }
+
+    public BaseComponent setHoverEvent(HoverEvent hoverEvent) {
+        this.hoverEvent = hoverEvent;
+        return this;
+    }
+
+    public BaseComponent setInsertion(String insertion) {
+        this.insertion = insertion;
+        return this;
+    }
+
+    public BaseComponent setItalic(Boolean italic) {
+        this.italic = italic;
+        return this;
+    }
+
+    public BaseComponent setObfuscated(Boolean obfuscated) {
+        this.obfuscated = obfuscated;
+        return this;
+    }
+
+    public BaseComponent setParent(BaseComponent parent) {
+        this.parent = parent;
+        return this;
+    }
+
+    public BaseComponent setReset(boolean reset) {
+        this.reset = reset;
+        return this;
+    }
+
+    public BaseComponent setStrikethrough(Boolean strikethrough) {
+        this.strikethrough = strikethrough;
+        return this;
+    }
+
+    public BaseComponent setUnderlined(Boolean underlined) {
+        this.underlined = underlined;
+        return this;
+    }
+
+    public boolean isReset() {
+        return reset;
+    }
+
+    public List<BaseComponent> getExtra() {
+        return extra;
     }
 }

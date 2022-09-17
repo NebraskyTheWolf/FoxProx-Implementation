@@ -70,6 +70,9 @@ enum ForgeClientHandshakeState implements IForgeClientPacketHandler<ForgeClientH
         @Override
         public ForgeClientHandshakeState send(PluginMessage message, UserConnection con)
         {
+
+            System.out.println(message.getData()[0] + " ForgeClientHandshakeState::debug");
+
             // Client Hello.
             if ( message.getData()[0] == 1 )
             {

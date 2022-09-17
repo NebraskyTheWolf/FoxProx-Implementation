@@ -20,6 +20,11 @@ public class ServerConnectRequestTest
         }
 
         @Override
+        public boolean isHydroManaged() {
+            return false;
+        }
+
+        @Override
         public SocketAddress getSocketAddress()
         {
             return null;

@@ -7,15 +7,23 @@ import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Logger;
 import lombok.Getter;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.config.ConfigurationAdapter;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.permissions.EntityPermissions;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.plugin.PluginManager;
 import net.md_5.bungee.api.scheduler.TaskScheduler;
+import net.samagames.api.channels.JsonModMessage;
+import net.samagames.api.channels.ModChannel;
+import net.samagames.databases.DatabaseConnector;
+import net.samagames.databases.impl.PubSubAPI;
+import net.samagames.persistanceapi.GameServiceManager;
+import net.samagames.persistanceapi.beans.utils.BungeeConfigBean;
 import redis.clients.jedis.Jedis;
 
 public abstract class ProxyServer
@@ -332,4 +340,17 @@ public abstract class ProxyServer
 
     public abstract void publish(String channel, String message);
 
+    public abstract ScheduledExecutorService getExecutor();
+    public abstract EntityPermissions getPlayerPermissions(UUID player);
+    public abstract EntityPermissions getPlayerPermissions(ProxiedPlayer player);
+    public abstract void sendModerationMessage(ModChannel channel, JsonModMessage message);
+    public abstract GameServiceManager getGameServiceManager();
+
+    public abstract PubSubAPI getPubSub();
+
+    public abstract DatabaseConnector getDatabaseConnector();
+
+    public abstract BungeeConfigBean getBungeeConfig();
+
+    public abstract FetchLobby getLobbyManager();
 }

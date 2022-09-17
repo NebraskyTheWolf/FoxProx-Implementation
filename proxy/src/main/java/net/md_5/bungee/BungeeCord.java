@@ -2,7 +2,6 @@ package net.md_5.bungee;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -11,8 +10,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import dev._2lstudios.flamecord.FlameCord;
-import dev._2lstudios.flamecord.commands.FlameCordCommand;
-import dev._2lstudios.flamecord.configuration.ModulesConfiguration;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.github.waterfallmc.waterfall.conf.WaterfallConfiguration;
 import io.github.waterfallmc.waterfall.event.ProxyExceptionEvent;
@@ -28,10 +25,8 @@ import io.netty.util.ResourceLeakDetector;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -45,6 +40,8 @@ import java.util.ResourceBundle;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -57,12 +54,7 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.Synchronized;
-import net.md_5.bungee.api.CommandSender;
-import net.md_5.bungee.api.Favicon;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.ReconnectHandler;
-import net.md_5.bungee.api.ServerPing;
-import net.md_5.bungee.api.Title;
+import net.md_5.bungee.api.*;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.KeybindComponent;
 import net.md_5.bungee.api.chat.ScoreComponent;
@@ -73,6 +65,7 @@ import net.md_5.bungee.api.config.ConfigurationAdapter;
 import net.md_5.bungee.api.config.ListenerInfo;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.permissions.EntityPermissions;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.plugin.PluginManager;
 import net.md_5.bungee.chat.ComponentSerializer;
@@ -82,26 +75,40 @@ import net.md_5.bungee.chat.SelectorComponentSerializer;
 import net.md_5.bungee.chat.TextComponentSerializer;
 import net.md_5.bungee.chat.TranslatableComponentSerializer;
 import net.md_5.bungee.command.*;
+import net.md_5.bungee.command.foxprox.admin.CommandEnd;
+import net.md_5.bungee.command.foxprox.admin.CommandSEnd;
+import net.md_5.bungee.command.foxprox.admin.CommandServer;
+import net.md_5.bungee.command.foxprox.mod.chat.CommandChannel;
+import net.md_5.bungee.command.foxprox.mod.chat.CommandSlow;
+import net.md_5.bungee.command.foxprox.mod.ingame.CommandBTP;
+import net.md_5.bungee.command.foxprox.mod.ingame.CommandCheck;
+import net.md_5.bungee.command.foxprox.mod.ingame.CommandMod;
+import net.md_5.bungee.command.foxprox.mod.ingame.CommandSTP;
+import net.md_5.bungee.command.foxprox.mod.sanction.*;
+import net.md_5.bungee.command.foxprox.player.CommandHub;
+import net.md_5.bungee.command.foxprox.player.CommandReport;
 import net.md_5.bungee.compress.CompressFactory;
 import net.md_5.bungee.conf.Configuration;
 import net.md_5.bungee.conf.YamlConfig;
 import net.md_5.bungee.forge.ForgeConstants;
-import net.md_5.bungee.module.ModuleManager;
-import net.md_5.bungee.module.cmd.alert.CommandAlert;
-import net.md_5.bungee.module.cmd.alert.CommandAlertRaw;
-import net.md_5.bungee.module.cmd.find.CommandFind;
-import net.md_5.bungee.module.cmd.list.CommandList;
-import net.md_5.bungee.module.cmd.send.CommandSend;
-import net.md_5.bungee.module.reconnect.yaml.YamlReconnectHandler;
+import net.md_5.bungee.listeners.*;
 import net.md_5.bungee.netty.PipelineUtils;
 import net.md_5.bungee.protocol.DefinedPacket;
 import net.md_5.bungee.protocol.ProtocolConstants;
 import net.md_5.bungee.protocol.packet.PluginMessage;
 import net.md_5.bungee.query.RemoteQuery;
 import net.md_5.bungee.scheduler.BungeeScheduler;
+import net.md_5.bungee.listeners.ServersListeners;
 import net.md_5.bungee.util.CaseInsensitiveMap;
-import net.samagames.Loader;
-import net.samagames.core.databases.RedisServer;
+import net.md_5.bungee.util.ModerationUtils;
+import net.samagames.api.channels.JsonModMessage;
+import net.samagames.api.channels.ModChannel;
+import net.samagames.api.pubsub.RedisEmitter;
+import net.samagames.databases.DatabaseConnector;
+import net.samagames.databases.RedisServer;
+import net.samagames.databases.impl.PubSubAPI;
+import net.samagames.persistanceapi.GameServiceManager;
+import net.samagames.persistanceapi.beans.utils.BungeeConfigBean;
 import redis.clients.jedis.Jedis;
 
 /**
@@ -110,7 +117,7 @@ import redis.clients.jedis.Jedis;
 public class BungeeCord extends ProxyServer
 {
 
-    private static Loader FoxProxManager;
+    public static final String PROXY_TAG = ChatColor.DARK_AQUA + "[" + ChatColor.AQUA + "FoxGuard" + ChatColor.DARK_AQUA + "] " + ChatColor.WHITE + "┊ " + ChatColor.RESET;
 
     /**
      * Current operation state.
@@ -173,6 +180,21 @@ public class BungeeCord extends ProxyServer
     // Waterfall end
     @Getter
     private final Logger logger;
+
+    private GameServiceManager manager;
+    private DatabaseConnector databaseConnector;
+    private PubSubAPI pubSub;
+    private BungeeConfigBean bungeeConfig;
+
+    private PermissionsManager permissionsManager;
+    private ServersListeners serversListeners;
+    private ModerationListener moderationListener;
+    private PlayerJoinListener playerJoinListener;
+    private ProxyPingListener proxyPingListener;
+    private NetworkListeners networkListeners;
+    private LoadBalancerListener loadBalancerListener;
+    private FetchLobby fetchLobby;
+
     public final Gson gson = new GsonBuilder()
             .registerTypeAdapter( BaseComponent.class, new ComponentSerializer() )
             .registerTypeAdapter( TextComponent.class, new TextComponentSerializer() )
@@ -192,7 +214,6 @@ public class BungeeCord extends ProxyServer
     // FlameCord end - 1.7.x support
     @Getter
     private ConnectionThrottle connectionThrottle;
-    private final ModuleManager moduleManager = new ModuleManager();
 
     {
         // TODO: Proper fallback when we interface the manager
@@ -203,6 +224,8 @@ public class BungeeCord extends ProxyServer
     {
         return (BungeeCord) ProxyServer.getInstance();
     }
+
+    private ScheduledExecutorService executor;
 
     @SuppressFBWarnings("DM_DEFAULT_ENCODING")
     public BungeeCord() throws IOException
@@ -278,6 +301,8 @@ public class BungeeCord extends ProxyServer
             whitelistedAddresses.add(serverInfo.getSocketAddress().toString());
         }
 
+        whitelistedAddresses.add("45.155.168.25"); // WEBSITE
+
         FlameCord.reload(logger, whitelistedAddresses);
 
         if (config.isForgeSupport()) {
@@ -326,11 +351,43 @@ public class BungeeCord extends ProxyServer
             System.exit(1);
         }
 
-        FoxProxManager = new Loader(config.getSqlUrl(), config.getSqlUser(), config.getSqlPass(), new RedisServer(
-                "127.0.0.1",
+        this.executor = Executors.newScheduledThreadPool(32);
+        this.fetchLobby = new FetchLobby();
+
+        this.manager = new GameServiceManager(config.getSqlUrl(), config.getSqlUser(), config.getSqlPass(), 1, 10);
+        this.bungeeConfig = this.getGameServiceManager().getBungeeConfig();
+        this.databaseConnector = new DatabaseConnector(this, new RedisServer(
+                "139.162.195.97",
                 6379,
-               "Mohammedia1970@"
-        ), this);
+                "Mohammedia1970@"
+        ));
+        this.pubSub = new PubSubAPI(this);
+
+        this.pubSub.subscribe("*", new RedisEmitter());
+        this.pubSub.subscribe("*", new RedisEmitter.PatternEmitter());
+
+        this.permissionsManager = new PermissionsManager();
+        this.serversListeners = new ServersListeners();
+        this.moderationListener = new ModerationListener();
+        this.playerJoinListener = new PlayerJoinListener();
+        this.proxyPingListener = new ProxyPingListener();
+        this.networkListeners = new NetworkListeners();
+        this.loadBalancerListener = new LoadBalancerListener();
+
+        this.getPluginManager()
+                .registerListener(this.permissionsManager);
+        this.getPluginManager()
+                .registerListener(this.serversListeners);
+        this.getPluginManager()
+                .registerListener(this.moderationListener);
+        this.getPluginManager()
+                .registerListener(this.playerJoinListener);
+        this.getPluginManager()
+                .registerListener(this.proxyPingListener);
+        this.getPluginManager()
+                .registerListener(this.networkListeners);
+        this.getPluginManager()
+                .registerListener(this.loadBalancerListener);
     }
 
     public void startListeners()
@@ -410,6 +467,9 @@ public class BungeeCord extends ProxyServer
             }
         }
         listeners.clear();
+
+        this.databaseConnector.killConnection();
+        this.pubSub.disable();
     }
 
     @Override
@@ -812,28 +872,93 @@ public class BungeeCord extends ProxyServer
 
     @Override
     public Jedis getRedisConnection() {
-        Preconditions.checkNotNull(FoxProxManager, "FoxProx is not initialized.");
-        return FoxProxManager.getDatabaseConnector().getBungeeResource();
+        Preconditions.checkNotNull(this.databaseConnector.getBungeeResource(), "FoxProx is not initialized.");
+        return this.databaseConnector.getBungeeResource();
     }
 
     @Override
     public void publish(String channel, String message) {
-        Preconditions.checkNotNull(FoxProxManager, "FoxProx is not initialized.");
-        FoxProxManager.getPubSub().send(channel, message);
+        Preconditions.checkNotNull(this.pubSub, "pubSub is not initialized.");
+        this.pubSub.send(channel, message);
+    }
+
+    @Override
+    public ScheduledExecutorService getExecutor() {
+        Preconditions.checkNotNull(this.executor, "Executor can't be null");
+        return this.executor;
+    }
+
+    @Override
+    public EntityPermissions getPlayerPermissions(UUID player) {
+        Preconditions.checkNotNull(player, "player can't be null");
+        return this.permissionsManager.getPlayerPermission(player);
+    }
+
+    @Override
+    public EntityPermissions getPlayerPermissions(ProxiedPlayer player) {
+        Preconditions.checkNotNull(player, "player can't be null");
+        return this.permissionsManager.getPlayerPermission(player.getUniqueId());
+    }
+
+    @Override
+    public void sendModerationMessage(ModChannel channel, JsonModMessage message) {
+        Preconditions.checkNotNull(channel, "channel can't be null");
+        Preconditions.checkNotNull(message, "message can't be null");
+
+        ModerationUtils.sendMessage(channel, message.getMessage());
+    }
+
+    @Override
+    public GameServiceManager getGameServiceManager() {
+        Preconditions.checkNotNull(this.manager, "manager can't be null");
+        return this.manager;
+    }
+
+    @Override
+    public PubSubAPI getPubSub() {
+        Preconditions.checkNotNull(this.pubSub, "pubSub can't be null");
+        return this.pubSub;
+    }
+
+    @Override
+    public DatabaseConnector getDatabaseConnector() {
+        Preconditions.checkNotNull(this.databaseConnector, "databaseConnector can't be null");
+        return this.databaseConnector;
+    }
+
+    @Override
+    public BungeeConfigBean getBungeeConfig() {
+        Preconditions.checkNotNull(this.bungeeConfig, "bungeeConfig can't be null");
+        return this.bungeeConfig;
+    }
+
+    @Override
+    public FetchLobby getLobbyManager() {
+        Preconditions.checkNotNull(this.fetchLobby, "fetchLobby can't be null");
+        return this.fetchLobby;
     }
 
     // FlameCord - Method to simplify module registering
     public void loadModules() {
-        pluginManager.registerCommand(null, new CommandEnd());
+        pluginManager.registerCommand(null, new CommandReport());
         pluginManager.registerCommand(null, new CommandHub());
-        pluginManager.registerCommand(null, new CommandSEnd());
-        pluginManager.registerCommand(null, new CommandBungee());
+
+        pluginManager.registerCommand(null, new CommandEnd());
         pluginManager.registerCommand(null, new CommandServer());
 
-        pluginManager.loadPlugins();
-    }
+        pluginManager.registerCommand(null, new CommandBan());
+        pluginManager.registerCommand(null, new CommandHistory());
+        pluginManager.registerCommand(null, new CommandKick());
+        pluginManager.registerCommand(null, new CommandMute());
+        pluginManager.registerCommand(null, new CommandWarn());
 
-    public static Loader getFoxProxManager() {
-        return FoxProxManager;
+        pluginManager.registerCommand(null, new CommandSTP());
+        pluginManager.registerCommand(null, new CommandMod());
+        pluginManager.registerCommand(null, new CommandCheck());
+        pluginManager.registerCommand(null, new CommandBTP());
+
+        pluginManager.registerCommand(null, new CommandSlow());
+        pluginManager.registerCommand(null, new CommandChannel());
+
     }
 }

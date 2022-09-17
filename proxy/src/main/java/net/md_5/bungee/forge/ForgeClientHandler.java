@@ -2,6 +2,7 @@ package net.md_5.bungee.forge;
 
 import com.google.common.base.Preconditions;
 import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.Map;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -34,7 +35,7 @@ public class ForgeClientHandler
      */
     @Getter
     @Setter(AccessLevel.PACKAGE)
-    private Map<String, String> clientModList = null;
+    private Map<String, String> clientModList = new HashMap<String, String>();
 
     private final ArrayDeque<PluginMessage> packetQueue = new ArrayDeque<PluginMessage>();
 

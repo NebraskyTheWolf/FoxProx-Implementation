@@ -1,5 +1,6 @@
 package net.md_5.bungee.api.connection;
 
+import java.io.IOException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -12,7 +13,10 @@ import net.md_5.bungee.api.Title;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.event.ServerConnectEvent;
+import net.md_5.bungee.api.permissions.EntityPermissions;
 import net.md_5.bungee.api.score.Scoreboard;
+import net.md_5.bungee.protocol.packet.PluginMessage;
+import net.samagames.persistanceapi.beans.players.PlayerBean;
 
 /**
  * Represents a player who's connection is being connected to somewhere else,
@@ -390,8 +394,30 @@ public interface ProxiedPlayer extends Connection, CommandSender
 
     /**
      * Getting the player Client name.
+     *
      * @return this player's { @link ClientBrand }
      */
 
-    String ClientBrandName();
+    PluginMessage ClientBrandName() throws IOException;
+    EntityPermissions getPermission();
+
+
+    void setPermissions(EntityPermissions permissions);
+
+    void resetPermissions();
+
+    void updatePermissions(EntityPermissions permissions);
+
+    PlayerBean handledPlayer() throws Exception;
+
+    void createHandledPlayer() throws Exception;
+
+    void updateHandledPlayer() throws Exception;
+
+    // SANCTION
+
+    boolean isBanned() throws Exception;
+
+    boolean connectToLobby(int hubId);
+
 }

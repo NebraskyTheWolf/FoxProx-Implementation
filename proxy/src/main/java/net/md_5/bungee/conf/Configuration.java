@@ -120,46 +120,7 @@ public abstract class Configuration implements ProxyConfig
 
         Preconditions.checkArgument( listeners != null && !listeners.isEmpty(), "No listeners defined." );
 
-        Map<String, ServerInfo> newServers = adapter.getServers();
-
-        if ( servers == null )
-        {
-            servers = new CaseInsensitiveMap<>( newServers );
-        } else
-        {
-            Map<String, ServerInfo> oldServers = getServersCopy();
-
-            for ( ServerInfo oldServer : oldServers.values() )
-            {
-                ServerInfo newServer = newServers.get(oldServer.getName());
-                if ((newServer == null || !oldServer.getAddress().equals(newServer.getAddress())) && !oldServer.getPlayers().isEmpty()) {
-                    BungeeCord.getInstance().getLogger().info("Moving players off of server: " + oldServer.getName());
-                    // The server is being removed, or having it's address changed
-                    for (ProxiedPlayer player : oldServer.getPlayers()) {
-                        ListenerInfo listener = player.getPendingConnection().getListener();
-                        String destinationName = newServers.get(listener.getDefaultServer()) == null ? listener.getDefaultServer() : listener.getFallbackServer();
-                        ServerInfo destination = newServers.get(destinationName);
-                        if (destination == null) {
-                            BungeeCord.getInstance().getLogger().severe("Couldn't find server " + listener.getDefaultServer() + " or " + listener.getFallbackServer() + " to put player " + player.getName() + " on");
-                            player.disconnect(BungeeCord.getInstance().getTranslation("fallback_kick", "Not found on reload"));
-                            continue;
-                        }
-                        player.connect(destination, (success, cause) -> {
-                            if (!success) {
-                                BungeeCord.getInstance().getLogger().log(Level.WARNING, "Failed to connect " + player.getName() + " to " + destination.getName(), cause);
-                                player.disconnect(BungeeCord.getInstance().getTranslation("fallback_kick", cause.getCause().getClass().getName()));
-                            }
-                        });
-                    }
-                } else {
-                    // This server isn't new or removed, we'll use bungees behavior of just ignoring
-                    // any changes to info outside of the address, this is not ideal, but the alternative
-                    // requires resetting multiple objects of which have no proper identity
-                    newServers.put(oldServer.getName(), oldServer);
-                }
-            }
-            this.servers = new CaseInsensitiveMap<>(newServers);
-        }
+        servers = new CaseInsensitiveMap<>( adapter.getServers() );
     }
 
     @Override

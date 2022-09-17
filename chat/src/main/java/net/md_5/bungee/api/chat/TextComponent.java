@@ -232,4 +232,9 @@ public final class TextComponent extends BaseComponent
     {
         return "TextComponent{text=" + text + ", " + super.toString() + '}';
     }
+
+    public TextComponent setText(String text) {
+        this.text = text;
+        return this;
+    }
 }

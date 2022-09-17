@@ -44,6 +44,7 @@ public class ProtocolConstants
     public static final int MINECRAFT_1_18_2 = 758;
     public static final int MINECRAFT_1_19 = 759;
     public static final int MINECRAFT_1_19_1 = 760;
+    public static final int FLOOFF_CLIENT = 3032;
     public static final List<String> SUPPORTED_VERSIONS;
     public static final List<Integer> SUPPORTED_VERSION_IDS;
 
@@ -62,7 +63,8 @@ public class ProtocolConstants
                 "1.16.x",
                 "1.17.x",
                 "1.18.x",
-                "1.19.x"
+                "1.19.x",
+                "FlooffClient v5"
         );
         ImmutableList.Builder<Integer> supportedVersionIds = ImmutableList.<Integer>builder().add(
                 // FlameCord start - 1.7.x support
@@ -101,14 +103,10 @@ public class ProtocolConstants
                 ProtocolConstants.MINECRAFT_1_18,
                 ProtocolConstants.MINECRAFT_1_18_2,
                 ProtocolConstants.MINECRAFT_1_19,
-                ProtocolConstants.MINECRAFT_1_19_1
-        );
+                ProtocolConstants.MINECRAFT_1_19_1,
 
-        if ( SNAPSHOT_SUPPORT )
-        {
-            // supportedVersions.add( "1.19.x" );
-            // supportedVersionIds.add( ProtocolConstants.MINECRAFT_1_19 );
-        }
+                ProtocolConstants.FLOOFF_CLIENT // <-- FOX PROX CUSTOM CLIENT -->
+        );
 
         SUPPORTED_VERSIONS = supportedVersions.build();
         SUPPORTED_VERSION_IDS = supportedVersionIds.build();

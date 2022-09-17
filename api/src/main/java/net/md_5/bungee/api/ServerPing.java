@@ -86,7 +86,7 @@ public class ServerPing
     {
 
         private String type = "FML";
-        private List<ModItem> modList = new ArrayList<>();
+        public List<ModItem> modList = new ArrayList<>();
     }
 
     @Data
@@ -100,7 +100,7 @@ public class ServerPing
 
     // Right now, we don't get the mods from the user, so we just use a stock ModInfo object to
     // create the server ping. Vanilla clients will ignore this.
-    private final ModInfo modinfo = new ModInfo();
+    public final ModInfo modinfo = new ModInfo();
 
     @Deprecated
     public ServerPing(Protocol version, Players players, String description, String favicon)

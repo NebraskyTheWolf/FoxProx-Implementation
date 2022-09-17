@@ -66,8 +66,7 @@
         <module>query</module>
         <!--<module>slf4j</module>-->
         <module>native</module>
-        <module>flamecord</module>
-        <module>foxprox</module> <!-- FlameCord - POM Changes -->
+        <module>flamecord</module> <!-- FlameCord - POM Changes -->
     </modules>
 
 

@@ -12,9 +12,11 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.util.internal.PlatformDependent;
+
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -29,12 +31,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import net.md_5.bungee.api.Callback;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.ProxyServer;
-import net.md_5.bungee.api.ServerConnectRequest;
-import net.md_5.bungee.api.SkinConfiguration;
-import net.md_5.bungee.api.Title;
+import net.md_5.bungee.api.*;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.config.ListenerInfo;
@@ -42,6 +39,8 @@ import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.event.PermissionCheckEvent;
 import net.md_5.bungee.api.event.ServerConnectEvent;
+import net.md_5.bungee.api.permissions.DefaultPermission;
+import net.md_5.bungee.api.permissions.EntityPermissions;
 import net.md_5.bungee.api.score.Scoreboard;
 import net.md_5.bungee.chat.ComponentSerializer;
 import net.md_5.bungee.connection.InitialHandler;
@@ -69,6 +68,8 @@ import net.md_5.bungee.tab.TabList;
 import net.md_5.bungee.util.CaseInsensitiveSet;
 import net.md_5.bungee.util.ChatComponentTransformer;
 import net.md_5.bungee.util.QuietException;
+import net.samagames.persistanceapi.beans.players.PlayerBean;
+import net.samagames.persistanceapi.beans.players.SanctionBean;
 
 @RequiredArgsConstructor
 public final class UserConnection implements ProxiedPlayer
@@ -155,6 +156,13 @@ public final class UserConnection implements ProxiedPlayer
         }
     };
 
+    // Hardcoded
+    // SamaGames permissions implementation
+
+    private final Object[] syncPermission = new Object[] {};
+
+    private EntityPermissions handledPermissions;
+
     public void init()
     {
         this.displayName = name;
@@ -183,7 +191,6 @@ public final class UserConnection implements ProxiedPlayer
         ch.write( packet );
     }
 
-    @Deprecated
     public boolean isActive()
     {
         return !ch.isClosed();
@@ -201,6 +208,7 @@ public final class UserConnection implements ProxiedPlayer
     @Override
     public void connect(ServerInfo target)
     {
+
         connect( target, null, ServerConnectEvent.Reason.PLUGIN );
     }
 
@@ -273,10 +281,8 @@ public final class UserConnection implements ProxiedPlayer
         this.connect(info, callback, retry, reason, timeout, true);
     }
 
-    public void connect(ServerInfo info, final Callback<Boolean> callback, final boolean retry, ServerConnectEvent.Reason reason, final int timeout, boolean sendFeedback)
-    {
-        // Waterfall end
-        Preconditions.checkNotNull( info, "info" );
+    public void connect(ServerInfo info, final Callback<Boolean> callback, final boolean retry, ServerConnectEvent.Reason reason, final int timeout, boolean sendFeedback) {
+        Preconditions.checkNotNull(info, "info");
 
         ServerConnectRequest.Builder builder = ServerConnectRequest.builder().retry( retry ).reason( reason ).target( info ).sendFeedback(sendFeedback); // Waterfall - feedback param
         builder.connectTimeout(timeout); // Waterfall
@@ -403,11 +409,7 @@ public final class UserConnection implements ProxiedPlayer
 
     private String connectionFailMessage(Throwable cause)
     {
-        //FlameCord - Allow for toggle the logging of connection failures
-        if(FlameCord.getInstance().getFlameCordConfiguration().isLoggerDetailedConnection()) {
-            bungee.getLogger().log(Level.WARNING, "Error occurred processing connection for " + this.name + " " + Util.exception(cause, false)); // Waterfall
-        }
-        return ""; // Waterfall
+        return BungeeCord.PROXY_TAG + ChatColor.YELLOW + "A error occurred during Client ACK.";
     }
 
     @Override
@@ -438,11 +440,13 @@ public final class UserConnection implements ProxiedPlayer
             } );
 
             ch.close( new Kick( ComponentSerializer.toString( reason ) ) );
+            System.gc();
 
             if ( server != null )
             {
                 server.setObsolete( true );
                 server.disconnect( "Quitting" );
+                System.gc();
             }
         }
     }
@@ -791,8 +795,96 @@ public final class UserConnection implements ProxiedPlayer
     }
 
     @Override
-    public String ClientBrandName() {
-        PluginMessage brandMessage = pendingConnection.getBrandMessage();
-        return new String(brandMessage.getData(), StandardCharsets. UTF_8);
+    public PluginMessage ClientBrandName() {
+        return pendingConnection.getBrandMessage();
+    }
+
+    @Override
+    public EntityPermissions getPermission() {
+        return this.handledPermissions;
+    }
+
+    @Override
+    public void setPermissions(EntityPermissions permissions) {
+        synchronized (syncPermission) {
+            this.handledPermissions = permissions;
+        }
+    }
+
+    @Override
+    public void resetPermissions() {
+        this.handledPermissions = new DefaultPermission(this.getUniqueId());
+    }
+
+    @Override
+    public void updatePermissions(EntityPermissions permissions) {
+        this.handledPermissions = permissions;
+    }
+
+    @Override
+    public PlayerBean handledPlayer() throws Exception {
+        return ProxyServer
+                .getInstance()
+                .getGameServiceManager()
+                .getPlayer(this.getUniqueId());
+    }
+
+    @Override
+    public void createHandledPlayer() throws Exception {
+        ProxyServer
+                .getInstance()
+                .getGameServiceManager()
+                .createPlayer(new PlayerBean(
+                        this.getUniqueId(),
+                        this.getName(),
+                        null,
+                        500,
+                        0,
+                        0,
+                        new Timestamp(System.currentTimeMillis()),
+                        new Timestamp(System.currentTimeMillis()),
+                        this.getPendingConnection().getListener().getSocketAddress().toString(),
+                        null,
+                        1
+                ));
+    }
+
+    @Override
+    public void updateHandledPlayer() throws Exception {
+        PlayerBean player = this.handledPlayer();
+        ProxyServer.getInstance()
+                .getGameServiceManager()
+                .updatePlayer(new PlayerBean(
+                        this.getUniqueId(),
+                        this.getName(),
+                        null,
+                        player.getCoins(),
+                        player.getStars(),
+                        player.getPowders(),
+                        new Timestamp(System.currentTimeMillis()),
+                        player.getFirstLogin(),
+                        this.getPendingConnection().getListener().getSocketAddress().toString(),
+                        player.getTopTpKey(),
+                        player.getGroupId()
+                ));
+    }
+
+    @Override
+    public boolean isBanned() throws Exception {
+        SanctionBean banned = ProxyServer
+                .getInstance()
+                .getGameServiceManager()
+                .getPlayerBanned(this.handledPlayer());
+        return (banned != null && !banned.isDeleted());
+    }
+
+    @Override
+    public boolean connectToLobby(int hubId) {
+        if (ProxyServer.getInstance().getLobbyManager().isServerAvailable()) {
+            this.connect(ProxyServer.getInstance().getLobbyManager().fetchAllLobby().get(hubId));
+            return true;
+        } else {
+            return false;
+        }
     }
 }

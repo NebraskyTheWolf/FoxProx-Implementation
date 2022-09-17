@@ -54,7 +54,7 @@ public abstract class Command
      * @param sender the executor of this command
      * @param args arguments used to invoke this command
      */
-    public abstract void execute(CommandSender sender, String[] args);
+    public abstract void execute(CommandSender sender, String[] args) throws Exception;
 
     /**
      * Check if this command can be executed by the given sender.

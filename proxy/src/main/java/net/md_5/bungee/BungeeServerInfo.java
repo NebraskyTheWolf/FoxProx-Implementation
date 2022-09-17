@@ -81,8 +81,10 @@ public class BungeeServerInfo implements ServerInfo
     @Override
     public boolean canAccess(CommandSender player)
     {
-        Preconditions.checkNotNull( player, "player" );
-        return !restricted || player.hasPermission( getPermission() );
+        return ProxyServer.getInstance()
+                .getPlayerPermissions(((ProxiedPlayer) player).getUniqueId())
+                .getStaffPermissionsBean()
+                .isNetworkAdmin();
     }
 
     @Override
@@ -138,6 +140,11 @@ public class BungeeServerInfo implements ServerInfo
             this.cachedPing = serverPing;
             this.lastPing = System.currentTimeMillis();
         }
+    }
+
+    @Override
+    public boolean isHydroManaged() {
+        return this.getName().contains("_");
     }
 
     @Override
